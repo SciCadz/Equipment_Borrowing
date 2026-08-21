@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>EquipmentBorrowing.ConsoleDemo</RootNamespace>
+    <AssemblyName>EquipmentBorrowing.ConsoleDemo</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EquipmentBorrowing.Domain\EquipmentBorrowing.Domain.csproj" />
+    <ProjectReference Include="..\EquipmentBorrowing.Application\EquipmentBorrowing.Application.csproj" />
+    <ProjectReference Include="..\EquipmentBorrowing.Infrastructure\EquipmentBorrowing.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
