@@ -183,22 +183,50 @@ implementations) exists to support that single operation.
 
 ## Running the Demonstration
 
-This environment did not have the .NET SDK available to compile and run the
-project, so the build has not been verified end-to-end here. With the .NET 8
-SDK installed:
+`Domain`, `Application`, `Infrastructure`, and `ConsoleDemo` have been built
+and run successfully with the .NET 8 SDK (0 warnings, 0 errors):
 
 ```bash
-dotnet build
+dotnet build src/EquipmentBorrowing.ConsoleDemo/EquipmentBorrowing.ConsoleDemo.csproj
 dotnet run --project src/EquipmentBorrowing.ConsoleDemo
+```
+
+This prints one approved borrowing followed by four denied attempts
+(equipment not found, equipment unavailable, student not allowed to borrow,
+and student at the borrowing limit) — confirmed output:
+
+```text
+--- Successful borrow ---
+APPROVED: Borrowing #1 — student 1 borrowed equipment 100, due 2026-09-04.
+
+--- Failure - equipment does not exist ---
+DENIED: EquipmentNotFound
+
+--- Failure - equipment is unavailable ---
+DENIED: EquipmentNotAvailable
+
+--- Failure - student is not allowed to borrow ---
+DENIED: StudentNotAllowedToBorrow
+
+--- Failure - student reached the active borrowing limit ---
+DENIED: BorrowingLimitReached
+```
+
+`tests/EquipmentBorrowing.Tests` could **not** be restored/verified in the
+environment this was prepared in, because its `xunit` and
+`Microsoft.NET.Test.Sdk` packages need `api.nuget.org`, which that sandbox
+could not reach (403 Forbidden, no local mirror available). Run it yourself
+on a machine with normal internet access:
+
+```bash
 dotnet test
 ```
 
-`dotnet run` prints one approved borrowing followed by four denied attempts
-(equipment not found, equipment unavailable, student not allowed to borrow,
-and student at the borrowing limit). `dotnet test` runs the six unit tests in
-`tests/EquipmentBorrowing.Tests`, covering the same success case and every
-failure rule individually.
+It should run six tests — the same success case and every failure rule
+individually — with the same outcomes already confirmed above via the
+console demo. If it doesn't pass, the test code and the service logic are in
+the same repo to compare line-by-line.
 
-Please run `dotnet build` yourself, take the required screenshot of a
-successful build, and confirm `dotnet test` passes before submitting —
-neither has been verified in the environment this was written in.
+Still needed for submission: the required screenshot of a successful
+`dotnet build` (including the test project, once you have NuGet access) and
+confirmation that `dotnet test` passes on your machine.
