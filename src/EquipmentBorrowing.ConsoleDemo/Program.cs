@@ -27,7 +27,7 @@ var borrowEquipmentService = new BorrowEquipmentService(
     equipmentRepository,
     borrowingRepository);
 
-var today = new DateOnly(2026, 8, 28);
+var today = DateOnly.FromDateTime(DateTime.Today);
 var dueDate = today.AddDays(7);
 
 // ---- Successful case -----------------------------------------------------

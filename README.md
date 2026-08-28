@@ -1,232 +1,216 @@
 # Campus Equipment Borrowing System
 
-Laboratory Activity 1 — From Requirements to Application Structure.
+**ITSD 81 – Desktop Application Development | Laboratory Activity 1**
 
-This repository contains the architectural foundation for the system (Domain,
-Application, Infrastructure, Tests) with one fully implemented use case,
-**Borrow Equipment**, demonstrated both by a console program and by an
-automated test suite. No database and no graphical interface are included,
-per the activity's scope.
+A small C#/.NET 8 solution for the **Campus Equipment Borrowing System**.  
+This submission implements the **Borrow Equipment** use case using separated Domain, Application, Infrastructure, Console Demo, and Tests projects.
 
----
-
-## Part A — Analysis
-
-### A. Actors
-
-| Actor | What they expect from the system |
-|---|---|
-| **Student** | To be able to request equipment and immediately know whether the request is approved or denied, and why. |
-| **Laboratory Staff / Custodian** (implied) | To trust that the system enforces borrowing rules correctly, so equipment inventory and student borrowing history stay accurate without manual checking. |
-
-The scenario describes only one active initiator of requests (the Student);
-laboratory staff are an implied actor because someone is ultimately
-responsible for the equipment records the system protects, even though the
-scenario does not describe a staff-facing action.
-
-### B. Use Cases
-
-| Item | Description |
-|---|---|
-| Use Case | **Borrow Equipment** |
-| Primary Actor | Student |
-| Preconditions | Student is registered and currently allowed to borrow; equipment catalog exists. |
-| Main Action | Student requests to borrow a specific, available piece of equipment. |
-| Expected Result | A new borrowing record is created with status Active; the equipment becomes unavailable. |
-| Possible Failure | Student not allowed to borrow, equipment not found, equipment unavailable, or student already at the maximum number of active borrowings. |
-
-| Item | Description |
-|---|---|
-| Use Case | **Return Equipment** |
-| Primary Actor | Student |
-| Preconditions | An Active borrowing record exists linking the student to the equipment. |
-| Main Action | Student returns the borrowed equipment. |
-| Expected Result | The borrowing is marked Returned; the equipment becomes available again. |
-| Possible Failure | No matching active borrowing exists for that student/equipment pair (e.g. already returned). |
-
-| Item | Description |
-|---|---|
-| Use Case | **Find Available Equipment** |
-| Primary Actor | Student |
-| Preconditions | Equipment catalog exists. |
-| Main Action | Student browses or searches for equipment that is currently available. |
-| Expected Result | A list of equipment currently marked available is returned. |
-| Possible Failure | No equipment currently matches the availability filter (an empty result, not necessarily an error). |
-
-> Only **Borrow Equipment** is implemented in this activity, as instructed in
-> Part E. Return Equipment and Find Available Equipment are documented here
-> because they were used in Part A/D to reason about what the domain models
-> and repositories need to support later, but their application services and
-> supporting repository methods are intentionally left out of this
-> submission so that no interface method exists without a use case that
-> currently needs it.
-
-### C. Domain Concepts
-
-**Student**
-1. Must contain: identity, name, whether currently allowed to borrow, and the maximum number of active borrowings permitted.
-2. Rules/state it owns: its own eligibility flag; the borrowing-limit *policy* value.
-3. Not its responsibility: tracking which specific items it currently has borrowed (that is a fact about `Borrowing` records, queried when needed, not duplicated state that could go stale), or deciding whether a particular request should be approved (that requires looking at `Equipment` too, which is beyond what a `Student` alone can know).
-
-**Equipment**
-1. Must contain: identity, name, and current availability.
-2. Rules/state it owns: the transition between available and borrowed (it can validate that it isn't already borrowed before allowing that transition).
-3. Not its responsibility: knowing who currently has it or for how long (that belongs to `Borrowing`), or deciding eligibility (that depends on the `Student`).
-
-**Borrowing**
-1. Must contain: which student, which equipment, the date borrowed, the expected return date, the actual return date (once returned), and its status.
-2. Rules/state it owns: the Active → Returned transition, and the invariant that the expected return date cannot precede the borrow date.
-3. Not its responsibility: deciding whether it should have been created in the first place (that is the application service's job, since it needs the `Student`, the `Equipment`, and the count of other `Borrowing` records together).
+No database, Entity Framework Core, or Avalonia UI is used, as required for this activity.
 
 ---
 
-## Part I — Architecture Explanation
+## 1. Requirements and Use Cases
 
-### 1. Solution Structure
+### Actor
 
-- **Domain** — the concepts and rules that exist regardless of how the
-  system is built or deployed: `Student`, `Equipment`, `Borrowing`,
-  `BorrowingStatus`. No dependency on any other project.
-- **Application** — the use cases the system performs, expressed as
-  services (`BorrowEquipmentService`) that coordinate Domain objects through
-  repository *interfaces* (`IStudentRepository`, `IEquipmentRepository`,
-  `IBorrowingRepository`), plus the request/result types those services use.
-  Depends only on Domain.
-- **Infrastructure** — concrete, swappable implementations of the
-  Application-layer interfaces. For this activity, three in-memory
-  repositories (`InMemoryStudentRepository`, `InMemoryEquipmentRepository`,
-  `InMemoryBorrowingRepository`). Depends on Domain and Application.
-- **Tests** — automated tests for `BorrowEquipmentService`, covering the
-  successful path and every failure rule. Depends on all three projects
-  above, the same way a future UI would.
+**Student** — requests equipment and receives an approval or a reason for denial.
 
-A separate `EquipmentBorrowing.ConsoleDemo` project is included under `src/`
-as the "minimal executable program" required by Part H — it wires the
-in-memory repositories to the service and prints one successful and several
-unsuccessful borrowing attempts to the console.
+### Major Use Cases
 
-### 2. Dependency Direction
+| Use Case | Primary Actor | Expected Result | Possible Failure |
+|---|---|---|---|
+| Borrow Equipment | Student | Borrowing is created and equipment becomes unavailable | Student not found/not allowed, equipment not found/unavailable, borrowing limit reached |
+| Return Equipment | Student | Borrowing becomes Returned and equipment becomes available | No matching active borrowing |
+| Find Available Equipment | Student | Available equipment is listed | No matching equipment |
+
+Only **Borrow Equipment** is implemented for this laboratory activity.
+
+---
+
+## 2. Solution Structure
 
 ```text
-ConsoleDemo / Tests / Future Avalonia UI
-          │
-          ▼
-     Application  ───uses interfaces implemented by───▶  (implemented in Infrastructure)
-       │      ▲
-       ▼      │
-     Domain   │
-              │
-     Infrastructure
+EquipmentBorrowing/
+├── README.md
+├── EquipmentBorrowing.sln
+├── src/
+│   ├── EquipmentBorrowing.Domain/
+│   │   ├── Student.cs
+│   │   ├── Equipment.cs
+│   │   ├── Borrowing.cs
+│   │   └── BorrowingStatus.cs
+│   │
+│   ├── EquipmentBorrowing.Application/
+│   │   ├── Interfaces/
+│   │   │   ├── IStudentRepository.cs
+│   │   │   ├── IEquipmentRepository.cs
+│   │   │   └── IBorrowingRepository.cs
+│   │   ├── Common/
+│   │   │   ├── BorrowEquipmentRequest.cs
+│   │   │   └── BorrowEquipmentResult.cs
+│   │   └── Services/
+│   │       └── BorrowEquipmentService.cs
+│   │
+│   ├── EquipmentBorrowing.Infrastructure/
+│   │   └── Repositories/
+│   │       ├── InMemoryStudentRepository.cs
+│   │       ├── InMemoryEquipmentRepository.cs
+│   │       └── InMemoryBorrowingRepository.cs
+│   │
+│   └── EquipmentBorrowing.ConsoleDemo/
+│       └── Program.cs
+│
+└── tests/
+    └── EquipmentBorrowing.Tests/
+        └── BorrowEquipmentServiceTests.cs
 ```
 
-Application depends on Domain, and defines the repository *interfaces*.
-Infrastructure depends on both Domain and Application, because it must
-implement Application's interfaces using Domain's types — but Application
-never references Infrastructure. This is what allows the storage mechanism
-to change later without touching the business logic: Application only knows
-about `IEquipmentRepository`, never `InMemoryEquipmentRepository` or any
-future `SqliteEquipmentRepository`.
+### Responsibilities
 
-### 3. Use Case Mapping
+- **Domain** — `Student`, `Equipment`, `Borrowing`, and `BorrowingStatus`; contains domain state and state-transition rules.
+- **Application** — repository interfaces, request/result types, and `BorrowEquipmentService`; contains the borrowing use-case logic.
+- **Infrastructure** — in-memory implementations of the repository interfaces.
+- **ConsoleDemo** — minimal executable demonstration of successful and failed borrowing requests.
+- **Tests** — automated tests for the borrowing service.
+
+---
+
+## 3. Dependency Direction
+
+```text
+ConsoleDemo / Future UI / Tests
+              │
+              ▼
+        Application
+          │     ▲
+          ▼     │
+        Domain  │
+                │
+        Infrastructure
+```
+
+`Application` depends only on `Domain`.  
+`Infrastructure` depends on `Application` and `Domain` because it implements the repository interfaces.  
+The application service never creates a database connection or directly depends on a storage implementation.
+
+This makes it possible to replace the in-memory repositories with SQLite repositories later without changing the borrowing business logic.
+
+---
+
+## 4. Implemented Use Case
 
 ```text
 Actor:                          Student
 Use Case:                       Borrow Equipment
 Application Service:            BorrowEquipmentService
 Domain Objects Used:            Student, Equipment, Borrowing, BorrowingStatus
-Repository Interfaces Used:     IStudentRepository, IEquipmentRepository, IBorrowingRepository
-Infrastructure Implementations: InMemoryStudentRepository, InMemoryEquipmentRepository, InMemoryBorrowingRepository
+Repository Interfaces Used:     IStudentRepository
+                                IEquipmentRepository
+                                IBorrowingRepository
+Infrastructure Used:            InMemoryStudentRepository
+                                InMemoryEquipmentRepository
+                                InMemoryBorrowingRepository
 ```
 
-### 4. Reflection
+The service checks:
 
-**1. Why should the application service depend on a repository interface
-instead of directly depending on a database implementation?**
-Because the business rules for borrowing equipment (is the student allowed,
-is the equipment available, has the limit been reached) have nothing to do
-with *how* that data is stored. Depending on an interface means
-`BorrowEquipmentService` can be tested with an in-memory fake today and
-handed a SQLite-backed implementation later without a single line of the
-service itself changing.
+1. Student exists.
+2. Student is allowed to borrow.
+3. Equipment exists.
+4. Equipment is available.
+5. Student has not reached the active borrowing limit.
+6. If all checks pass, a borrowing is created and the equipment becomes unavailable.
 
-**2. Which parts of your current solution could remain unchanged if SQLite
-were added later?**
-All of Domain and Application. Only Infrastructure would change — the three
-`InMemory...Repository` classes would be replaced (or supplemented) by
-implementations that talk to SQLite, still satisfying the same three
-interfaces.
-
-**3. Which project would eventually contain Avalonia Views?**
-A new UI project (e.g. `EquipmentBorrowing.Desktop`) sitting alongside
-`ConsoleDemo`, at the same "outer" layer — it would reference Application
-(to call `BorrowEquipmentService`) and Domain (to display the data returned),
-but Infrastructure would only need to be referenced at startup to wire up
-concrete repositories via dependency injection.
-
-**4. Should an Avalonia button directly execute database queries? Why or
-why not?**
-No. If a button's click handler executed SQL directly, the business rules
-(eligibility, availability, borrowing limits) would either have to live in
-the UI code or be duplicated everywhere a similar action is triggered. Routing
-the click handler through `BorrowEquipmentService` instead keeps the rules in
-one place, keeps the UI free of persistence concerns, and keeps the logic
-testable without launching a UI at all.
-
-**5. What part of your implementation represents the actual business
-operation requested by the actor?**
-`BorrowEquipmentService.ExecuteAsync`. It is the one piece of code that
-represents "a student borrowing equipment" as a whole — everything else
-(the domain models, the repository interfaces, the in-memory
-implementations) exists to support that single operation.
+Dependencies are supplied through the `BorrowEquipmentService` constructor (manual dependency injection).
 
 ---
 
-## Running the Demonstration
+## 5. Demonstration
 
-`Domain`, `Application`, `Infrastructure`, and `ConsoleDemo` have been built
-and run successfully with the .NET 8 SDK (0 warnings, 0 errors):
+The console program demonstrates:
+
+- one successful borrowing;
+- equipment not found;
+- equipment unavailable;
+- student not allowed to borrow;
+- borrowing limit reached.
+
+Run:
 
 ```bash
-dotnet build src/EquipmentBorrowing.ConsoleDemo/EquipmentBorrowing.ConsoleDemo.csproj
+dotnet build
 dotnet run --project src/EquipmentBorrowing.ConsoleDemo
 ```
 
-This prints one approved borrowing followed by four denied attempts
-(equipment not found, equipment unavailable, student not allowed to borrow,
-and student at the borrowing limit) — confirmed output:
+The successful case prints an `APPROVED` message. Failure cases print `DENIED` with the corresponding reason.
 
-```text
---- Successful borrow ---
-APPROVED: Borrowing #1 — student 1 borrowed equipment 100, due 2026-09-04.
+---
 
---- Failure - equipment does not exist ---
-DENIED: EquipmentNotFound
+## 6. Tests
 
---- Failure - equipment is unavailable ---
-DENIED: EquipmentNotAvailable
+The test project contains six tests covering:
 
---- Failure - student is not allowed to borrow ---
-DENIED: StudentNotAllowedToBorrow
+- successful borrowing;
+- student not found;
+- student not allowed to borrow;
+- equipment not found;
+- equipment unavailable;
+- borrowing limit reached.
 
---- Failure - student reached the active borrowing limit ---
-DENIED: BorrowingLimitReached
-```
-
-`tests/EquipmentBorrowing.Tests` could **not** be restored/verified in the
-environment this was prepared in, because its `xunit` and
-`Microsoft.NET.Test.Sdk` packages need `api.nuget.org`, which that sandbox
-could not reach (403 Forbidden, no local mirror available). Run it yourself
-on a machine with normal internet access:
+Run:
 
 ```bash
 dotnet test
 ```
 
-It should run six tests — the same success case and every failure rule
-individually — with the same outcomes already confirmed above via the
-console demo. If it doesn't pass, the test code and the service logic are in
-the same repo to compare line-by-line.
+---
 
-Still needed for submission: the required screenshot of a successful
-`dotnet build` (including the test project, once you have NuGet access) and
-confirmation that `dotnet test` passes on your machine.
+## 7. Reflection
+
+### 1. Why use repository interfaces?
+
+The application service should depend on what the application needs, not on a particular storage technology. Interfaces allow the same business logic to work with in-memory storage now and SQLite later.
+
+### 2. What can remain unchanged if SQLite is added?
+
+The Domain models and `BorrowEquipmentService` can remain unchanged. New SQLite repository implementations can satisfy the existing interfaces.
+
+### 3. Where would Avalonia Views go later?
+
+A separate desktop/UI project, alongside the ConsoleDemo project.
+
+### 4. Should an Avalonia button execute database queries directly?
+
+No. The UI should call the application service. Database access belongs behind repository abstractions so business rules remain separate and testable.
+
+### 5. What represents the actual business operation?
+
+`BorrowEquipmentService.ExecuteAsync` represents the **Borrow Equipment** operation because it coordinates the validation rules, domain objects, and repositories needed to approve or reject the request.
+
+---
+
+## 8. Submission Checklist
+
+The repository is intended to be submission-ready:
+
+- [x] C#/.NET solution
+- [x] Domain models
+- [x] Repository abstractions
+- [x] Application service
+- [x] Manual dependency injection
+- [x] In-memory repository implementations
+- [x] Successful use-case demonstration
+- [x] Failure-case demonstrations
+- [x] Automated tests
+- [x] Architecture explanation
+- [x] Git history with meaningful development commits
+
+Before submission, run:
+
+```bash
+dotnet build
+dotnet test
+dotnet run --project src/EquipmentBorrowing.ConsoleDemo
+```
+
+For the required screenshot, capture the terminal showing the **successful `dotnet build`** result. Then upload/push the repository to Git.
